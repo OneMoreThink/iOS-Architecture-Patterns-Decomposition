@@ -21,7 +21,7 @@ extension Task {
     @NSManaged public var icon: String?
     @NSManaged public var done: Bool
     @NSManaged public var createdAt: Date?
-    @NSManaged public var list: TaskList?
+    @NSManaged public var list: TasksList?
 
 }
 

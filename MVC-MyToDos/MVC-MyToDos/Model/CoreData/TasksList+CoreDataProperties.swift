@@ -1,5 +1,5 @@
 //
-//  TaskList+CoreDataProperties.swift
+//  TasksList+CoreDataProperties.swift
 //  MVC-MyToDos
 //
 //  Created by 이종선 on 7/24/24.
@@ -10,10 +10,10 @@ import Foundation
 import CoreData
 
 
-extension TaskList {
+extension TasksList {
 
-    @nonobjc public class func fetchRequest() -> NSFetchRequest<TaskList> {
-        return NSFetchRequest<TaskList>(entityName: "TaskList")
+    @nonobjc public class func fetchRequest() -> NSFetchRequest<TasksList> {
+        return NSFetchRequest<TasksList>(entityName: "TasksList")
     }
 
     @NSManaged public var title: String?
@@ -25,7 +25,7 @@ extension TaskList {
 }
 
 // MARK: Generated accessors for tasks
-extension TaskList {
+extension TasksList {
 
     @objc(addTasksObject:)
     @NSManaged public func addToTasks(_ value: Task)
@@ -41,6 +41,6 @@ extension TaskList {
 
 }
 
-extension TaskList : Identifiable {
+extension TasksList : Identifiable {
 
 }
