@@ -24,7 +24,7 @@ MVC는 Model-View-Controller로 있고 전반적인 흐름은 다음과 같이 �
    - Controller가 Model에게 
    - 버튼이 눌렀으니까 새로운 Task를 만들어서 CoreData에 저장해야해요. 
 3. Model에서는 요청받은 동작을 실행한다. 
-   - 새로운 Task를 만들고 CoreData저장을 ~실행해본다.~ 
+   - 새로운 Task를 만들고 CoreData저장을 실행해본다.
 
 4. **Update:** Model은 동작의 결과를 Controller에게 알려줍니다. 
    - Model이 Controller에게
