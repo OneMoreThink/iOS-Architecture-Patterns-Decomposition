@@ -35,7 +35,7 @@ MVC는 Model-View-Controller로 있고 전반적인 흐름은 다음과 같이 �
 6. View는 구성된 화면을 렌더링해서 사용자에게 보여줍니다. 
    - ’Task Add’ 요청에 대한 결과는 이렇게 되었어요
   
-### MVC를 구성하는 3가지 디자인 패턴 [📚Wiki](https://github.com/OneMoreThink/iOS-Architecture-Patterns-Decomposition/wiki/MVC-%ED%8C%A8%ED%84%B4%EC%9D%84-%EA%B5%AC%EC%84%B1%ED%95%98%EB%8A%94-3%EA%B0%80%EC%A7%80-%EB%94%94%EC%9E%90%EC%9D%B8-%ED%8C%A8%ED%84%B4)
+## MVC를 구성하는 3가지 디자인 패턴 [📚Wiki](https://github.com/OneMoreThink/iOS-Architecture-Patterns-Decomposition/wiki/MVC-%ED%8C%A8%ED%84%B4%EC%9D%84-%EA%B5%AC%EC%84%B1%ED%95%98%EB%8A%94-3%EA%B0%80%EC%A7%80-%EB%94%94%EC%9E%90%EC%9D%B8-%ED%8C%A8%ED%84%B4)
 - Composite Pattern
 - Strategy Pattern
 - Observer Pattern
