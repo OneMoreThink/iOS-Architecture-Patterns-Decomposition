@@ -12,7 +12,7 @@ class CoreDataManager {
     
     static let shared = CoreDataManager()
 
-    init() {}
+    private init() {}
     
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "ToDoList")
