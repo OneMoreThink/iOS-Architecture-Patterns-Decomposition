@@ -81,5 +81,44 @@ MVC는 Model-View-Controller로 있고 전반적인 흐름은 다음과 같이 �
 > View 와 Controller의 연관관계는 View로부터 독립적인 Controller의 테스트를 어렵게 한다. 
 
 
+### MVC 구현
+
+#### Model
+- business logic
+- data access and manipulation
+- extensions, constants, etc. 
+- Core Data, Extensions, Services, etc.
+
+  - Observer design pattern을 통해 Model(발행자)과 Controller(구독자)로 만들어 Model의 변경사항을 Controller가 알 수 있도록 한다. 
+- Model의 변경은 주로 Database 상에 CRUD를 통해 이루어진다. 
+- CoreData는 내부적으로 notification을 발행하여 Model의 변경사항을 Controller에게 전달 할 수 있다. 
+- CoreData
+	- CoreDataManager : PersistentContainer와 Context를 관리하는 Manager으로서 어플리케이션과 영구 저장소 사이에서 엔티티를 관리하는 역할을 한다. 
+	- EntityModelMapProtocol : Entity와 Model을 매핑해주는 프로토콜(Protocol]이다. 어플리케이션에서 사용하는 모델중에 영구저장소에 저장이 필요한 모델의 경우에는 해당 프로토콜을 채택하게 함으로써 엔티티와 연결을 해준다. 
+	- TaskModel
+	 - TaskListModel
+- Services (Service 계층) : CoreDataManager 기능을 사용해 Task와 TaskList를 관리하는 기능을 제공 
+- Extensions + Helpers (Architecture)
+
+### View 
+- View는 사용자와의 상호작용을 담당하는 레이어다. 
+- 버튼이나 라벨과 같이 간단한 컴포넌트
+- 이러한 컴포넌트들이 합쳐진 하나의 간단한 뷰 
+- 이러한 간단한 뷰들이 합쳐진 하나의 복잡한 뷰
+
+- Buttons, Labels의 경우에는 `UILabel`과 `UIButton` 같은 `UIView`의 서브 클래스를 채택해서 기본적인 모양만 정의 해놓고 `translatesAutoresizingMaskIntoConstraints = false`를 내부적으로 호출함으로써 해당 컴포넌트를 사용하는 곳에서 레이아웃을 설정할 수 있도록한다. 
+- Cell의 경우에는 표기할 속성 프로퍼티 및 해당 프로퍼티의 값들이 어떻게 배치될지에 대해 내부적으로 정의를 해놓고 Cell 안에 들어갈 내용의 경우에는 `setParameter`와 같은 메서드를 public으로 노출하여 해당 Cell을 사용하는 `UITableView`나 `UICollectionView`에서 Cell을 구성할 때 값을 넣어주도록 하였다. 
+- View의 경우에는 앞서 정의한 컴포넌트들을 조합하여 사용하는 곳으로 컴포넌트들을 프로퍼티로 가지고 레이아웃을 배치하며 `UITableView`나 `UICollectionView`의 `dataSource` 및 `delegate`를 구현하여 각 컴포넌트들에 동작을 부여하고 있다. 
+
+- View 레이어를 구성함에 있어 전체적으로 기본 구성은 미리 정해 놓되 안에 들어가는 내용이나 동작을 해당 컴포넌트를 사용하는 곳에서 결정할 수 있게 함으로써 재사용성을 높였다.
+- 이를 위해서 delegate 패턴을 이용하여 **동작을 부여하는 곳**에서 해당 delegate 프로토콜 타입의 프로퍼티를 가지게 하고 **실제 동작을 구현하는 곳**에서 delegate를 채택하도록 한다. 
+
+### Controller
+- View에서는 사용자 입력에 대한 동작을 Delegate 패턴을 활용해서 Controller에 위임하고 있다. 
+- ~ViewProtocol을 통해 View 내부에서 필요한 동작을 정의하고 `delegate: ~ViewProtocol` 프로퍼티를 통해 View 내부에서 각 컴포넌트에 대해 동작을 부여해주고 있다. 
+- Controller는 자신의 `view`가 가지고 있는 Protocol을 채택하여 해당 View의 사용자 상호작용과 c관련된 동작을 구현해준다. 
+- Service를 Protocol을 이용해 추상화한뒤, Controller를 정의할 때는 앞서 정의한 ServiceProtocol 프로퍼티를 가지고 있게 한다. 그리고 이후에 Controller를 실제로 생성하는 시점에서 ServiceProtocol에 알맞는 구현체를 주입하는 의존성 주입의 방식을 이용한다. 
+- Controller는 Model의 Service를 이용하여 View에서 필요한 동작을 직접 구현한다. 
+
 
 
