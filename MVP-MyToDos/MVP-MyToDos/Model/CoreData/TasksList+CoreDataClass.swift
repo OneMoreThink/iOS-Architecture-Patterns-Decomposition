@@ -2,7 +2,7 @@
 //  TasksList+CoreDataClass.swift
 //  MVP-MyToDos
 //
-//  Created by 이종선 on 7/24/24.
+//  Created by 이종선 on 10/7/24.
 //
 //
 

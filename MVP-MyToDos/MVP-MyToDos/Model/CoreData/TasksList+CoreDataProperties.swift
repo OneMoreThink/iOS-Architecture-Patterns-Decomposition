@@ -2,7 +2,7 @@
 //  TasksList+CoreDataProperties.swift
 //  MVP-MyToDos
 //
-//  Created by 이종선 on 7/24/24.
+//  Created by 이종선 on 10/7/24.
 //
 //
 
@@ -16,10 +16,10 @@ extension TasksList {
         return NSFetchRequest<TasksList>(entityName: "TasksList")
     }
 
+    @NSManaged public var createdAt: Date?
+    @NSManaged public var icon: String?
     @NSManaged public var id: String?
     @NSManaged public var title: String?
-    @NSManaged public var icon: String?
-    @NSManaged public var createdAt: Date?
     @NSManaged public var tasks: NSSet?
 
 }
