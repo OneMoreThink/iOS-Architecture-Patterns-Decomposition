@@ -6,75 +6,43 @@
 //
 
 import Foundation
-import RxSwift
-import RxRelay
-import RxCocoa
+import Combine
 
 class HomeViewModel {
     
-    var output: Output!
-    var input: Input!
+    // MARK: Publishers
+    @Published private(set) var lists: [TasksListModel] = []
+    @Published private(set) var selectedList: TasksListModel?
     
-    struct Input {
-        let reload: PublishRelay<Void>
-        let deleteRow: PublishRelay<IndexPath>
-        let selectRow: PublishRelay<IndexPath>
-    }
-    
-    struct Output {
-        let hideEmptyState: Driver<Bool>
-        let lists: Driver<[TasksListModel]>
-        let selectedList: Driver<TasksListModel>
-    }
-    
-    private let lists = BehaviorRelay<[TasksListModel]>(value: [])
-    private let taskList = BehaviorRelay<TasksListModel>(value: TasksListModel())
-
-    private var tasksListService: TasksListServiceProtocol!
+    private var cancellables = Set<AnyCancellable>()
+    private let tasksListService: TasksListServiceProtocol
     
     init(tasksListService: TasksListServiceProtocol) {
         self.tasksListService = tasksListService
-        // Inputs
-        let reload = PublishRelay<Void>()
-        _ = reload.subscribe(onNext: { [self] _ in
-            fetchTasksLists()
-        })
-        let deleteRow = PublishRelay<IndexPath>()
-        _ = deleteRow.subscribe(onNext: { [self] indexPath in
-            tasksListService.deleteList(listAtIndexPath(indexPath))
-        })
-        let selectRow = PublishRelay<IndexPath>()
-        _ = selectRow.subscribe(onNext: { [self] indexPath in
-            taskList.accept(listAtIndexPath(indexPath))
-        })
-        self.input = Input(reload: reload, deleteRow: deleteRow, selectRow: selectRow)
-        
-        // Outputs
-        let items = lists
-            .asDriver(onErrorJustReturn: [])
-        let hideEmptyState = lists
-            .map({ items in
-                return !items.isEmpty
-            })
-            .asDriver(onErrorJustReturn: false)
-        let selectedList = taskList.asDriver()
-        output = Output(hideEmptyState: hideEmptyState, lists: items, selectedList: selectedList)
-        
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(contextObjectsDidChange),
-                                               name: NSNotification.Name.NSManagedObjectContextObjectsDidChange,
-                                               object: CoreDataManager.shared.mainContext)
+        fetchLists()
     }
     
-    @objc func contextObjectsDidChange() {
-        fetchTasksLists()
+    // MARK: Public Methods
+    func deleteList(at indexPath: IndexPath) {
+        guard lists.indices.contains(indexPath.row) else { return }
+        tasksListService.deleteList(lists[indexPath.row])
     }
     
-    func fetchTasksLists() {
-        lists.accept(tasksListService.fetchLists())
+    func selectList(at indexPath: IndexPath) {
+        guard lists.indices.contains(indexPath.row) else { return }
+        selectedList = lists[indexPath.row]
     }
     
-    func listAtIndexPath(_ indexPath: IndexPath) -> TasksListModel {
-        lists.value[indexPath.row]
+    private func setupNotifications() {
+        NotificationCenter.default
+            .publisher(for: NSNotification.Name.NSManagedObjectContextObjectsDidChange)
+            .sink { [weak self] _ in
+                self?.fetchLists()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func fetchLists() {
+        lists = tasksListService.fetchLists()
     }
 }

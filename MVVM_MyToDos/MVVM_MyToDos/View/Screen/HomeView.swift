@@ -6,7 +6,7 @@
 //
 
 import UIKit
-import RxSwift
+import Combine
 
 protocol HomeViewControllerDelegate: AnyObject {
     func addList()
@@ -21,7 +21,7 @@ class HomeView: UIView {
     private(set) var emptyState = EmptyStateView(frame: .zero, title: "Press 'Add List' to start")
     
     private let viewModel: HomeViewModel!
-    private let disposeBag = DisposeBag()
+    private var cancellables = Set<AnyCancellable>()
 
     weak var delegate: HomeViewControllerDelegate?
     
@@ -33,11 +33,38 @@ class HomeView: UIView {
         configureAddListButton()
         configureTableView()
         configureEmptyState()
-        bindViewToModel(viewModel)
+        setupBindings()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupBindings() {
+        // Lists 바인딩
+        viewModel.$lists
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] lists in
+                self?.tableView.reloadData()
+                self?.emptyState.isHidden = !lists.isEmpty
+            }
+            .store(in: &cancellables)
+        
+        // 선택된 리스트 바인딩
+        viewModel.$selectedList
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] list in
+                self?.delegate?.selectedList(list)
+            }
+            .store(in: &cancellables)
+        
+        // Add 버튼 탭 바인딩
+        addListButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
+    }
+    
+    @objc private func addButtonTapped() {
+        delegate?.addList()
     }
 }
 
@@ -72,6 +99,9 @@ private extension HomeView {
         tableView.register(ToDoListCell.self, forCellReuseIdentifier: ToDoListCell.reuseId)
         addSubview(tableView)
         
+        tableView.delegate = self
+        tableView.dataSource = self
+        
         NSLayoutConstraint.activate([
             tableView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             tableView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
@@ -90,52 +120,26 @@ private extension HomeView {
             emptyState.bottomAnchor.constraint(equalTo: addListButton.topAnchor, constant: -40)
         ])
     }
-    
-    func bindViewToModel(_ viewModel: HomeViewModel) {
-        
-        tableView.rx
-            .setDelegate(self)
-            .disposed(by: disposeBag)
-        
-        tableView.rx.itemDeleted
-            .bind(to: viewModel.input.deleteRow)
-            .disposed(by: disposeBag)
-        
-        tableView.rx.itemSelected
-            .bind(to: viewModel.input.selectRow)
-            .disposed(by: disposeBag)
-        
-        viewModel.output.lists
-            .drive(tableView.rx.items(cellIdentifier: ToDoListCell.reuseId, cellType: ToDoListCell.self)) { (_, list, cell) in
-                cell.setCellParametersForList(list)
-            }
-            .disposed(by: disposeBag)
-        
-        addListButton.rx.tap
-            .asDriver()
-            .drive(onNext: { [self] in
-                delegate?.addList()
-            })
-            .disposed(by: disposeBag)
-        
-        viewModel.output.hideEmptyState
-            .drive(emptyState.rx.isHidden)
-            .disposed(by: disposeBag)
-        
-        viewModel.output.selectedList
-            .drive(onNext: { [self] list in
-                delegate?.selectedList(list)
-            })
-            .disposed(by: disposeBag)
-        
-        viewModel.input.reload.accept(())
-    }
 }
 
-
-extension HomeView: UITableViewDelegate {
-
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 100
+extension HomeView: UITableViewDelegate, UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return viewModel.lists.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
+        cell.textLabel?.text = viewModel.lists[indexPath.row].title
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        viewModel.selectList(at: indexPath)
+    }
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            viewModel.deleteList(at: indexPath)
+        }
     }
 }
