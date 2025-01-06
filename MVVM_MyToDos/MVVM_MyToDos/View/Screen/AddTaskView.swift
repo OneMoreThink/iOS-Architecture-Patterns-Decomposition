@@ -6,7 +6,7 @@
 //
 
 import UIKit
-import RxSwift
+import Combine
 
 protocol AddedTaskViewControllerDelegate: AnyObject {
     func addedTask()
@@ -14,7 +14,6 @@ protocol AddedTaskViewControllerDelegate: AnyObject {
 
 class AddTaskView: UIView {
     
-    private(set) var backButton = BackButton()
     private(set) var pageTitle = PageLabel(title: "Add Task")
     private(set) var titleLabel = UILabel(frame: .zero)
     private(set) var titleTextfield = UITextField()
@@ -23,7 +22,7 @@ class AddTaskView: UIView {
     private(set) var addTaskButton = MainButton(title: "Add Task", color: .mainCoralColor)
     
     private let viewModel: AddTaskViewModel!
-    private let disposeBag = DisposeBag()
+    private var cancellables = Set<AnyCancellable>()
         
     weak var delegate: AddedTaskViewControllerDelegate?
 
@@ -37,12 +36,51 @@ class AddTaskView: UIView {
         configureIconLabel()
         configureAddTaskButton()
         configureCollectionView()
-        bindViewToModel(viewModel)
+        setupBindings()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    func setupBindings() {
+            // TextField -> ViewModel
+            NotificationCenter.default
+                .publisher(for: UITextField.textDidChangeNotification, object: titleTextfield)
+                .compactMap { ($0.object as? UITextField)?.text }
+                .assign(to: \.title, on: viewModel)
+                .store(in: &cancellables)
+            
+            // TextField -> Add Button State
+            NotificationCenter.default
+                .publisher(for: UITextField.textDidChangeNotification, object: titleTextfield)
+                .compactMap { ($0.object as? UITextField)?.text }
+                .map { !$0.isEmpty }
+                .assign(to: \.isEnabled, on: addTaskButton)
+                .store(in: &cancellables)
+            
+            // Icon Selection -> ViewModel
+            iconSelectorView.$selectedIcon
+                .assign(to: \.icon, on: viewModel)
+                .store(in: &cancellables)
+            
+        // Add Button
+        addTaskButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
+        
+      
+        // Dismiss Action
+        viewModel.$shouldDismiss
+            .filter { $0 }
+            .sink { [weak self] _ in
+                self?.delegate?.addedTask()
+            }
+            .store(in: &cancellables)
+    }
+    
+    @objc private func addButtonTapped() {
+        viewModel.addTask()
+    }
+    
 }
 
 extension AddTaskView {
@@ -125,34 +163,5 @@ extension AddTaskView {
             iconSelectorView.topAnchor.constraint(equalTo: iconLabel.bottomAnchor, constant: 10),
             iconSelectorView.bottomAnchor.constraint(equalTo: addTaskButton.topAnchor, constant: -20)
         ])
-    }
-    
-    func bindViewToModel(_ viewModel: AddTaskViewModel) {
-        
-        titleTextfield
-            .rx.text
-            .map({!($0?.isEmpty)!})
-            .bind(to: addTaskButton.rx.isEnabled)
-            .disposed(by: disposeBag)
-        
-        titleTextfield.rx.text
-            .map({ $0! })
-            .bind(to: viewModel.input.title )
-            .disposed(by: disposeBag)
-        
-        addTaskButton.rx.tap
-            .bind(to: viewModel.input.addTask)
-            .disposed(by: disposeBag)
-        
-        iconSelectorView.selectedIcon
-            .bind(to: viewModel.input.icon)
-            .disposed(by: disposeBag)
-    
-        viewModel.output.dismiss
-            .skip(1)
-            .drive(onNext: { [self] in
-                delegate?.addedTask()
-            })
-            .disposed(by: disposeBag)
     }
 }

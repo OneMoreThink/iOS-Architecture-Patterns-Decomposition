@@ -20,6 +20,7 @@ class HomeViewModel {
     init(tasksListService: TasksListServiceProtocol) {
         self.tasksListService = tasksListService
         fetchLists()
+        setupNotifications()
     }
     
     // MARK: Public Methods

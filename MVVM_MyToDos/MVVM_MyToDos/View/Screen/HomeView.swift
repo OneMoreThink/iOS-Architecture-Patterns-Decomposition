@@ -123,13 +123,18 @@ private extension HomeView {
 }
 
 extension HomeView: UITableViewDelegate, UITableViewDataSource {
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return viewModel.lists.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = viewModel.lists[indexPath.row].title
+        let cell = tableView.dequeueReusableCell(withIdentifier: ToDoListCell.reuseId, for: indexPath) as! ToDoListCell
+        cell.setCellParametersForList(viewModel.lists[indexPath.row])
         return cell
     }
     
@@ -141,5 +146,9 @@ extension HomeView: UITableViewDelegate, UITableViewDataSource {
         if editingStyle == .delete {
             viewModel.deleteList(at: indexPath)
         }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 100
     }
 }

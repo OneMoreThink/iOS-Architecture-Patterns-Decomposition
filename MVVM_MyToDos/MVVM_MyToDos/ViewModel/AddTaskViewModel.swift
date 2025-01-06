@@ -6,57 +6,52 @@
 //
 
 import Foundation
-import RxRelay
-import RxCocoa
+import Combine
 
 class AddTaskViewModel {
     
-    var output: Output!
-    var input: Input!
-    
-    struct Input {
-        let icon: PublishRelay<String>
-        let title: PublishRelay<String>
-        let addTask: PublishRelay<Void>
-    }
-    
-    struct Output {
-        let dismiss: Driver<Void>
-    }
-
-    private var tasksListModel: TasksListModel!
-    private var taskService: TaskServiceProtocol!
-    private(set) var task: TaskModel!
-    
-    let dismiss = BehaviorRelay<Void>(value: ())
+    // MARK: - Properties
+     @Published private(set) var task: TaskModel
+     @Published private(set) var shouldDismiss = false
+     @Published var title = ""
+     @Published var icon = "checkmark.seal.fill"
+     
+     private let taskService: TaskServiceProtocol
+     private let tasksListModel: TasksListModel
+     private var cancellables = Set<AnyCancellable>()
 
     init(tasksListModel: TasksListModel,
          taskService: TaskServiceProtocol) {
         self.tasksListModel = tasksListModel
         self.taskService = taskService
-        self.task = TaskModel(id: ProcessInfo().globallyUniqueString,
-                              icon: "checkmark.seal.fill",
-                              done: false,
-                              createdAt: Date())
-        
-        // Inputs
-        let icon = PublishRelay<String>()
-        _ = icon.subscribe(onNext: { [self] newIcon in
-            task.icon = newIcon
-        })
-        let title = PublishRelay<String>()
-        _ = title.subscribe(onNext: { [self] newTitle in
-            task.title = newTitle
-        })
-        let addTask = PublishRelay<Void>()
-        _ = addTask.subscribe(onNext: { [self] _ in
-            taskService.saveTask(task, in: tasksListModel)
-            dismiss.accept(())
-        })
-        input = Input(icon: icon, title: title, addTask: addTask)
-        
-        // Outputs
-        let dismissView = dismiss.asDriver()
-        output = Output(dismiss: dismissView)
+        self.task = TaskModel(
+            id: ProcessInfo().globallyUniqueString,
+            icon: "checkmark.seal.fill",
+            done: false,
+            createdAt: Date()
+        )
+        setupBindings()
     }
+    
+    // MARK: - Public Methods
+      func addTask() {
+          taskService.saveTask(task, in: tasksListModel)
+          shouldDismiss = true
+      }
+      
+      private func setupBindings() {
+          // Title 업데이트
+          $title
+              .sink { [weak self] newTitle in
+                  self?.task.title = newTitle
+              }
+              .store(in: &cancellables)
+          
+          // Icon 업데이트
+          $icon
+              .sink { [weak self] newIcon in
+                  self?.task.icon = newIcon
+              }
+              .store(in: &cancellables)
+      }
 }
