@@ -6,11 +6,12 @@
 //
 
 import UIKit
-import RxRelay
+import Combine
 
 class IconSelectorView: UIView {
    
-    let selectedIcon = BehaviorRelay<String>(value: "checkmark.seal.fill")
+    @Published private(set) var selectedIcon: String = "checkmark.seal.fill"
+    private var cancellables = Set<AnyCancellable>()
     
     private var collectionView: UICollectionView!
     private var iconColor: UIColor!
@@ -66,6 +67,6 @@ extension IconSelectorView: UICollectionViewDelegate, UICollectionViewDataSource
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        selectedIcon.accept(Constants.icons[indexPath.item])
+        selectedIcon = Constants.icons[indexPath.item]
     }
 }

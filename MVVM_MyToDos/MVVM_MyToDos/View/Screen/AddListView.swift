@@ -6,8 +6,7 @@
 //
 
 import UIKit
-import RxSwift
-import RxCocoa
+import Combine
 
 class AddListView: UIView {
     
@@ -20,10 +19,10 @@ class AddListView: UIView {
     private(set) var addListButton = MainButton(title: "Add List", color: .mainBlueColor)
     
     private let viewModel: AddListViewModel!
-    private let disposeBag = DisposeBag()
+    private var cancellables = Set<AnyCancellable>()
     
     weak var delegate: BackButtonDelegate?
-
+    
     init(frame: CGRect = .zero, viewModel: AddListViewModel) {
         self.viewModel = viewModel
         super.init(frame: frame)
@@ -35,11 +34,55 @@ class AddListView: UIView {
         configureIconLabel()
         configureAddListButton()
         configureCollectionView()
-        bindViewToModel(viewModel)
+        setupBindings()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupBindings() {
+        // TextField -> ViewModel
+        NotificationCenter.default
+            .publisher(for: UITextField.textDidChangeNotification, object: titleTextfield)
+            .compactMap { ($0.object as? UITextField)?.text }
+            .assign(to: \.title, on: viewModel)
+            .store(in: &cancellables)
+        
+        // TextField -> Add Button State
+        NotificationCenter.default
+            .publisher(for: UITextField.textDidChangeNotification, object: titleTextfield)
+            .compactMap { ($0.object as? UITextField)?.text }
+            .map { !$0.isEmpty }
+            .assign(to: \.isEnabled, on: addListButton)
+            .store(in: &cancellables)
+        
+        // Icon Selection -> ViewModel
+        iconSelectorView.$selectedIcon
+            .assign(to: \.icon, on: viewModel)
+            .store(in: &cancellables)
+        
+        // Add Button
+        addListButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
+        
+        // Back Button
+        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+        
+        // Dismiss Action
+        viewModel.$shouldDismiss
+            .filter { $0 }
+            .sink { [weak self] _ in
+                self?.delegate?.navigateBack()
+            }
+            .store(in: &cancellables)
+    }
+    
+    @objc private func addButtonTapped() {
+        viewModel.addList()
+    }
+    
+    @objc private func backButtonTapped() {
+        viewModel.dismiss()
     }
 }
 
@@ -128,36 +171,5 @@ extension AddListView {
             iconSelectorView.topAnchor.constraint(equalTo: iconLabel.bottomAnchor, constant: 10),
             iconSelectorView.bottomAnchor.constraint(equalTo: addListButton.topAnchor, constant: -20)
         ])
-    }
-    
-    func bindViewToModel(_ viewModel: AddListViewModel) {
-        
-        titleTextfield.rx.text
-            .map({ !($0?.isEmpty)! })
-            .bind(to: addListButton.rx.isEnabled)
-            .disposed(by: disposeBag)
-        
-        titleTextfield.rx.text
-            .map({ $0! })
-            .bind(to: viewModel.input.title )
-            .disposed(by: disposeBag)
-        
-        addListButton.rx.tap
-            .bind(to: viewModel.input.addList)
-            .disposed(by: disposeBag)
-        
-        backButton.rx.tap
-            .bind(to: viewModel.input.dismiss)
-            .disposed(by: disposeBag)
-
-        iconSelectorView.selectedIcon
-            .bind(to: viewModel.input.icon)
-            .disposed(by: disposeBag)
-
-        viewModel.output.dismiss
-            .drive(onNext: { [self] _ in
-                delegate?.navigateBack()
-            })
-            .disposed(by: disposeBag)
     }
 }
