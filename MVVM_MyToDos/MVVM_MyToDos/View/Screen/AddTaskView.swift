@@ -14,7 +14,6 @@ protocol AddedTaskViewControllerDelegate: AnyObject {
 
 class AddTaskView: UIView {
     
-    private(set) var backButton = BackButton()
     private(set) var pageTitle = PageLabel(title: "Add Task")
     private(set) var titleLabel = UILabel(frame: .zero)
     private(set) var titleTextfield = UITextField()
