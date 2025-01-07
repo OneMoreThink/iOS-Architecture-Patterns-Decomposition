@@ -6,7 +6,7 @@
 //
 
 import UIKit
-import RxSwift
+import Combine
 
 class TaskCell: UITableViewCell {
     
@@ -20,7 +20,7 @@ class TaskCell: UITableViewCell {
     private(set) var cellIndex: Int = 0
     
     private(set) var checkButton = TaskCheckButton(frame: .zero)
-    private(set) var disposeBag = DisposeBag()
+    private var cancellables = Set<AnyCancellable>()
         
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -38,7 +38,7 @@ class TaskCell: UITableViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
-        disposeBag = DisposeBag()
+        cancellables.removeAll()
     }
 
     func setParametersForTask(_ task: TaskModel, at index: Int) {

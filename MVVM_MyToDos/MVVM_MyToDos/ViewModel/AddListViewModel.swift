@@ -26,28 +26,28 @@ class AddListViewModel {
         setupBindings()
     }
     // MARK: - Public Methods
-        func addList() {
-            tasksListService.saveTasksList(list)
-            shouldDismiss = true
-        }
+    func addList() {
+        tasksListService.saveTasksList(list)
+        shouldDismiss = true
+    }
+    
+    func dismiss() {
+        shouldDismiss = true
+    }
+    
+    private func setupBindings() {
+        // Title 업데이트
+        $title
+            .sink { [weak self] newTitle in
+                self?.list.title = newTitle
+            }
+            .store(in: &cancellables)
         
-        func dismiss() {
-            shouldDismiss = true
-        }
-        
-        private func setupBindings() {
-            // Title 업데이트
-            $title
-                .sink { [weak self] newTitle in
-                    self?.list.title = newTitle
-                }
-                .store(in: &cancellables)
-            
-            // Icon 업데이트
-            $icon
-                .sink { [weak self] newIcon in
-                    self?.list.icon = newIcon
-                }
-                .store(in: &cancellables)
-        }
+        // Icon 업데이트
+        $icon
+            .sink { [weak self] newIcon in
+                self?.list.icon = newIcon
+            }
+            .store(in: &cancellables)
+    }
 }

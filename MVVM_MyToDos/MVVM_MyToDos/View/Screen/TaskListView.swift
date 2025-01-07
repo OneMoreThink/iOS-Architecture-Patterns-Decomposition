@@ -6,7 +6,7 @@
 //
 
 import UIKit
-import RxSwift
+import Combine
 
 protocol TaskListViewControllerDelegate: AnyObject {
     func addTask()
@@ -22,7 +22,7 @@ class TaskListView: UIView {
     private var tasks = [TaskModel]()
     
     private let viewModel: TaskListViewModel!
-    private let disposeBag = DisposeBag()
+    private var cancellables = Set<AnyCancellable>()
     
     weak var delegate: (TaskListViewControllerDelegate & BackButtonDelegate)?
 
@@ -35,11 +35,36 @@ class TaskListView: UIView {
         configureAddTaskButton()
         configureTableView()
         configureEmptyState()
-        bindViewToModel(viewModel)
+        setupBindings()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupBindings() {
+        // Tasks 바인딩
+        viewModel.$tasks
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] tasks in
+                self?.tableView.reloadData()
+                self?.emptyState.isHidden = !tasks.isEmpty
+            }
+            .store(in: &cancellables)
+        
+        // Add Task 버튼 액션
+        addTaskButton.addTarget(self, action: #selector(addTaskButtonTapped), for: .touchUpInside)
+        
+        // Back 버튼 액션
+        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+    }
+    
+    @objc private func addTaskButtonTapped() {
+        delegate?.addTask()
+    }
+    
+    @objc private func backButtonTapped() {
+        delegate?.navigateBack()
     }
 }
 
@@ -65,6 +90,8 @@ private extension TaskListView {
             pageTitle.topAnchor.constraint(equalTo: topAnchor, constant: 60),
             pageTitle.heightAnchor.constraint(equalToConstant: 40)
         ])
+        
+        pageTitle.text = viewModel.tasksListModel.title
     }
     
     func configureAddTaskButton() {
@@ -92,6 +119,9 @@ private extension TaskListView {
             tableView.topAnchor.constraint(equalTo: pageTitle.bottomAnchor, constant: 20),
             tableView.bottomAnchor.constraint(equalTo: addTaskButton.topAnchor, constant: -40)
         ])
+        
+        tableView.delegate = self
+        tableView.dataSource = self
     }
     
     func configureEmptyState() {
@@ -105,54 +135,33 @@ private extension TaskListView {
         ])
     }
     
-    func bindViewToModel(_ viewModel: TaskListViewModel) {
-        
-        tableView.rx
-            .setDelegate(self)
-            .disposed(by: disposeBag)
-        
-        tableView.rx.itemDeleted
-            .bind(to: viewModel.input.deleteRow)
-            .disposed(by: disposeBag)
-        
-        viewModel.output.tasks
-            .drive(tableView.rx.items(cellIdentifier: TaskCell.reuseId, cellType: TaskCell.self)) { (index, task, cell) in
-                cell.setParametersForTask(task, at: index)
-                cell.checkButton.rx.tap
-                    .map({ IndexPath(row: cell.cellIndex, section: 0) })
-                    .bind(to: viewModel.input.updateRow)
-                    .disposed(by: cell.disposeBag)
-            }
-            .disposed(by: disposeBag)
-        
-        addTaskButton.rx.tap
-            .asDriver()
-            .drive(onNext: { [self] in
-                delegate?.addTask()
-            })
-            .disposed(by: disposeBag)
-        
-        backButton.rx.tap
-            .asDriver()
-            .drive(onNext: { [self] in
-                delegate?.navigateBack()
-            })
-            .disposed(by: disposeBag)
-        
-        viewModel.output.pageTitle
-            .drive(pageTitle.rx.text)
-            .disposed(by: disposeBag)
-        
-        viewModel.output.hideEmptyState
-            .drive(emptyState.rx.isHidden)
-            .disposed(by: disposeBag)
-        
-        viewModel.input.reload.accept(())
-    }
 }
 
 
-extension TaskListView: UITableViewDelegate {
+extension TaskListView: UITableViewDataSource, UITableViewDelegate {
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return viewModel.tasks.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: TaskCell.reuseId, for: indexPath) as! TaskCell
+        cell.setParametersForTask(viewModel.tasks[indexPath.row], at: indexPath.row)
+        cell.checkButton.addTarget(self, action: #selector(checkButtonTapped(_:)), for: .touchUpInside)
+        cell.checkButton.tag = indexPath.row
+        return cell
+    }
+    
+    @objc private func checkButtonTapped(_ sender: UIButton) {
+        let indexPath = IndexPath(row: sender.tag, section: 0)
+        viewModel.updateTask(at: indexPath)
+    }
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            viewModel.deleteTask(at: indexPath)
+        }
+    }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 100
